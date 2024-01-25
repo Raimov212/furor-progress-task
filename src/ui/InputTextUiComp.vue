@@ -1,0 +1,23 @@
+<script setup>
+defineProps({
+  modelValue: {
+    type: String,
+    default: ''
+  },
+  label: String
+})
+</script>
+
+<template>
+  <q-input
+    filled
+    :value="modelValue"
+    @input="$emit('update:modelValue', $event.target.value)"
+    v-bind="$attrs"
+    label="Ism"
+    lazy-rules
+    :rules="[(val) => (val && val.length > 0) || `${label} bo'sh bo'lishi mumkin emas! `]"
+  />
+</template>
+
+<style lang="scss" scoped></style>

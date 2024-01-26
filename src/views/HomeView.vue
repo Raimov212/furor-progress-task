@@ -1,15 +1,19 @@
 <script setup lang="ts">
-import { type Ref, ref } from 'vue'
+import { useStore } from 'vuex'
 import AddProduct from '../components/product/AddProductComp.vue'
 import ProductPageVue from '../pages/ProductPage.vue'
 
-const prompt: Ref<boolean> = ref(false)
+const store = useStore()
+
+const handleDialogPrompt = () => {
+  store.commit('setPromptDialog', true)
+}
 </script>
 
 <template>
   <main>
-    <q-btn label="Add Product" outline color="primary" @click="prompt = true" />
-    <q-dialog v-model="prompt" persistent>
+    <q-btn label="Add Product" outline color="primary" @click="handleDialogPrompt" />
+    <!-- <q-dialog v-model="prompt" persistent>
       <q-card style="min-width: 450px">
         <q-card-section>
           <div class="text-h6">Create product</div>
@@ -19,7 +23,10 @@ const prompt: Ref<boolean> = ref(false)
           <AddProduct />
         </q-card-section>
       </q-card>
-    </q-dialog>
+    </q-dialog> -->
+    <div v-if="store.getters.getPromptDialogProducts">
+      <AddProduct />
+    </div>
 
     <ProductPageVue />
   </main>

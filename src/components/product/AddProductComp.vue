@@ -7,13 +7,18 @@ export default {
   methods: {
     ...mapActions(['addProducts'])
   },
-  setup() {
+  props: {
+    item: {
+      type: Object
+    }
+  },
+  setup(props) {
     const q = useQuasar()
     const store = useStore()
 
-    const name: Ref<string | null> = ref(null)
-    const address: Ref<string | null> = ref(null)
-    const cost: Ref<number | null> = ref(null)
+    const name: Ref<string | null> = ref(props.item?.name_uz ?? null)
+    const address: Ref<string | null> = ref(props.item?.address ?? null)
+    const cost: Ref<number | null> = ref(props.item?.cost ?? null)
     const productType: Ref<string> = ref('bir')
     const options = ['bir', 'ikki', 'uch']
 
@@ -23,6 +28,11 @@ export default {
       address,
       productType,
       options,
+      store,
+
+      handleCloseDialog() {
+        store.commit('setPromptDialog', false)
+      },
 
       //Submit Product
       async onSubmit() {
@@ -45,7 +55,14 @@ export default {
           created_date: newDate
         }
 
-        await store.dispatch('addProducts', obj)
+        if (props.item) {
+          await store.dispatch('updateProducts', {
+            id: props.item.id,
+            obj
+          })
+        } else {
+          await store.dispatch('addProducts', obj)
+        }
 
         if (store.getters.getAddLoadingProducts) {
           q.notify({
@@ -78,49 +95,60 @@ export default {
 </script>
 
 <template>
-  <div class="q-pa-md" style="max-width: 400px">
-    <q-form @submit="onSubmit" @reset="onReset" class="q-gutter-md">
-      <!-- <InputTextUIComp :v-model="name" :label="'Ism'" /> -->
-      <q-input
-        filled
-        v-model="name"
-        label="Ism"
-        lazy-rules
-        :rules="[(val) => (val && val.length > 0) || `Ism bo'sh bo'lishi mumkin emas! `]"
-      />
-      <q-input
-        filled
-        v-model="address"
-        label="Yashash joyi"
-        lazy-rules
-        :rules="[(val) => (val && val.length > 0) || `Manzil bo'sh bo'lishi mumkin emas!`]"
-      />
+  <q-dialog v-model="store.getters.getPromptDialogProducts" persistent>
+    <q-card style="min-width: 450px">
+      <q-card-section>
+        <div class="text-h6">Create product</div>
+      </q-card-section>
 
-      <q-input
-        filled
-        type="number"
-        v-model="cost"
-        label="Miqdor"
-        lazy-rules
-        :rules="[
-          (val) => (val !== null && val !== '') || `Miqdor bo'sh bo'lishi mumkin emas!`,
-          (val) => (val > 0 && val < 10000) || `1-10000 gacha bo'lishi kerak`
-        ]"
-      />
-      <q-select
-        filled
-        type="number"
-        :options="options"
-        v-model="productType"
-        label="Miqdor"
-        lazy-rules
-      />
+      <q-card-section class="q-pt-none">
+        <div class="q-pa-md" style="max-width: 400px">
+          <q-form @submit="onSubmit" @reset="onReset" class="q-gutter-md">
+            <div>{{ item }}</div>
+            <!-- <InputTextUIComp :v-model="name" :label="'Ism'" /> -->
+            <q-input
+              filled
+              v-model="name"
+              label="Ism"
+              lazy-rules
+              :rules="[(val) => (val && val.length > 0) || `Ism bo'sh bo'lishi mumkin emas! `]"
+            />
+            <q-input
+              filled
+              v-model="address"
+              label="Yashash joyi"
+              lazy-rules
+              :rules="[(val) => (val && val.length > 0) || `Manzil bo'sh bo'lishi mumkin emas!`]"
+            />
 
-      <q-card-actions align="between" class="text-primary">
-        <q-btn flat label="Cancel" v-close-popup />
-        <q-btn label="Reset" type="reset" color="primary" flat class="q-ml-sm" />
-        <q-btn label="Submit" type="submit" color="primary" flat />
-      </q-card-actions>
-    </q-form>
-  </div>
+            <q-input
+              filled
+              type="number"
+              v-model="cost"
+              label="Miqdor"
+              lazy-rules
+              :rules="[
+                (val) => (val !== null && val !== '') || `Miqdor bo'sh bo'lishi mumkin emas!`,
+                (val) => (val > 0 && val < 10000) || `1-10000 gacha bo'lishi kerak`
+              ]"
+            />
+            <q-select
+              filled
+              type="number"
+              :options="options"
+              v-model="productType"
+              label="Miqdor"
+              lazy-rules
+            />
+
+            <q-card-actions align="between" class="text-primary">
+              <q-btn flat label="Cancel" clo @click="handleCloseDialog" />
+              <q-btn label="Reset" type="reset" color="primary" flat class="q-ml-sm" />
+              <q-btn label="Submit" type="submit" color="primary" flat />
+            </q-card-actions>
+          </q-form>
+        </div>
+      </q-card-section>
+    </q-card>
+  </q-dialog>
 </template>

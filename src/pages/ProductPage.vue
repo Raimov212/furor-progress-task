@@ -1,9 +1,11 @@
 <script lang="ts">
-import { defineComponent, ref, onMounted, computed, Ref } from 'vue'
+import { defineComponent, ref, onMounted, computed, type Ref } from 'vue'
 import type { Product } from '../types/product'
 import { useStore } from 'vuex'
-import { useQuasar } from 'quasar'
-import AddProductComp from '../components/product/AddProductComp.vue'
+import { exportFile, useQuasar } from 'quasar'
+import AddProductComp from '../components/product/FormPUTAndDELProduct.vue'
+import { columns } from '../data/productsTableColumns'
+import { wrapCsvValue } from '../utils/tableCSVFile'
 
 export default defineComponent({
   name: 'product-page',
@@ -17,27 +19,6 @@ export default defineComponent({
     const selected: Ref<Product | undefined> = ref()
     const tableRef = ref()
 
-    const columns: any[] = [
-      {
-        name: 'id',
-        label: 'Id',
-        align: 'left',
-        sortable: true,
-        field: 'id'
-      },
-      { name: 'name_uz', label: 'Name', field: 'name_uz', sortable: true },
-      { name: 'product_type_id', label: 'Product Type', field: 'product_type_id', sortable: true },
-      { name: 'cost', label: 'Cost', field: 'cost', sortable: true },
-      { name: 'address', label: 'Address', field: 'address' },
-      {
-        name: 'created_date',
-        label: 'Date',
-        field: 'created_date',
-        sortable: true,
-        sort: (a: string, b: string) => parseInt(a, 10) - parseInt(b, 10)
-      }
-    ]
-
     onMounted(() => {
       store.dispatch('fetchProduct')
     })
@@ -46,15 +27,49 @@ export default defineComponent({
       return store.getters.getAllProducts
     })
 
-    computed(() => {
-      return selected
-    })
-
     return {
       columns,
       selected,
       store,
       tableRef,
+
+      //Export CSV FILE
+      exportTable() {
+        // naive encoding to csv format
+        const content = [columns.map((col) => wrapCsvValue(col.label))]
+          .concat(
+            store.getters.getAllProducts.map((row: { [x: string]: string }) =>
+              columns
+                .map((col) =>
+                  wrapCsvValue(
+                    typeof col.field === 'function'
+                      ? col.field(row)
+                      : row[col.field === void 0 ? col.name : col.field],
+                    col.format,
+                    row
+                  )
+                )
+                .join(',')
+            )
+          )
+          .join('\r\n')
+
+        const status = exportFile('table-export.csv', content, 'text/csv')
+
+        if (status !== true) {
+          q.notify({
+            message: 'Browser denied file download...',
+            color: 'negative',
+            icon: 'warning'
+          })
+        } else {
+          q.notify({
+            message: 'Csv file download',
+            color: 'green-4',
+            icon: 'done'
+          })
+        }
+      },
 
       async handleRowsDelete(item: Product) {
         await store.dispatch('deleteProducts', item.id)
@@ -101,13 +116,24 @@ export default defineComponent({
       dark
       selection="single"
     >
+      <template v-slot:top-right>
+        <q-btn
+          color="primary"
+          icon-right="archive"
+          label="Export products to csv file"
+          no-caps
+          @click="exportTable"
+        />
+      </template>
       <template #body="props">
+        <!-- visible table product -->
         <q-tr :props="props">
           <q-td>
             <q-btn
               flat
               round
               :icon="props.expand ? 'remove' : 'add'"
+              color="info"
               @click="props.expand = !props.expand"
             />
           </q-td>
@@ -118,6 +144,8 @@ export default defineComponent({
           <q-td key="address" :props="props">{{ props.row.address }} </q-td>
           <q-td key="created_date" :props="props">{{ props.row.created_date }} </q-td>
         </q-tr>
+
+        <!-- update table product -->
         <q-tr v-show="props.expand">
           <q-td>
             <q-btn
@@ -125,12 +153,14 @@ export default defineComponent({
               round
               @click="handleRowsDelete(props.row)"
               :icon="props.expand ? 'delete' : ''"
+              color="negative"
             />
             <q-btn
               flat
               round
               @click="handleRowsEdit(props.row)"
               :icon="props.expand ? 'edit' : ''"
+              color="warning"
             />
             <div v-if="store.getters.getPromptDialogProducts">
               <AddProductComp :item="selected" />

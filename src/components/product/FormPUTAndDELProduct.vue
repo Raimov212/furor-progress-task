@@ -29,6 +29,7 @@ export default {
       productType,
       options,
       store,
+      textTitle: props.item,
 
       handleCloseDialog() {
         store.commit('setPromptDialog', false)
@@ -98,13 +99,13 @@ export default {
   <q-dialog v-model="store.getters.getPromptDialogProducts" persistent>
     <q-card style="min-width: 450px">
       <q-card-section>
-        <div class="text-h6">Create product</div>
+        <div v-if="textTitle" class="text-h6">Update product</div>
+        <div v-else class="text-h6">Create product</div>
       </q-card-section>
 
       <q-card-section class="q-pt-none">
         <div class="q-pa-md" style="max-width: 400px">
           <q-form @submit="onSubmit" @reset="onReset" class="q-gutter-md">
-            <div>{{ item }}</div>
             <!-- <InputTextUIComp :v-model="name" :label="'Ism'" /> -->
             <q-input
               filled

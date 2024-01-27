@@ -1,21 +1,24 @@
 <script setup lang="ts">
+import { computed, onMounted } from 'vue'
 import { useStore } from 'vuex'
-import AddProduct from '../components/product/FormPUTAndDELProduct.vue'
-import ProductPageVue from '../pages/ProductPage.vue'
 
 const store = useStore()
 
-const handleDialogPrompt = () => {
-  store.commit('setPromptDialog', true)
+const obj = {
+  page: store.getters.getPaginationPageObj.page,
+  rowsPerPage: store.getters.getPaginationPageObj.rowsPerPage
 }
+
+onMounted(async () => {
+  await store.dispatch('fetchProduct', obj)
+  await store.dispatch('getTypeProducts')
+})
+
+computed(() => {
+  return store.getters.getAllProducts
+})
 </script>
 
 <template>
-  <main>
-    <q-btn label="Add Product" outline color="primary" @click="handleDialogPrompt" />
-    <div v-if="store.getters.getPromptDialogProducts">
-      <AddProduct />
-    </div>
-    <ProductPageVue />
-  </main>
+  <main><router-view></router-view></main>
 </template>

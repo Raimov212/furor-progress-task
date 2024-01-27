@@ -7,6 +7,10 @@ export interface Product {
   created_date: string
 }
 
-export interface ProductType {
-  product: Product[]
+export interface GetProductTypes {
+  id: number
+  name_uz: string
+  name_ru: string
+  name_uk: string
+  description: null | string
 }

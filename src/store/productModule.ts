@@ -1,11 +1,18 @@
-import type { Product } from '@/types/product'
+import type { GetProductTypes, Product } from '@/types/product'
 import axios from 'axios'
 
 export default {
   state: {
     products: [],
+    productsType: [],
     resultProduct: false,
-    promptDialog: false
+    promptDialog: false,
+    selectedProduct: undefined,
+    loading_products: false,
+    pagination_page_obj: {
+      page: 1,
+      rowsPerPage: 3
+    }
   },
   mutations: {
     setProducts(state: { products: Product[] }, products: Product[]) {
@@ -16,6 +23,21 @@ export default {
     },
     setPromptDialog(state: { promptDialog: boolean }, item: boolean) {
       state.promptDialog = item
+    },
+    setSelectedProduct(state: { selectedProduct: Product }, item: Product) {
+      state.selectedProduct = item
+    },
+    setProductsType(state: { productsType: GetProductTypes[] }, productsType: GetProductTypes[]) {
+      state.productsType = productsType
+    },
+    setLoadingProducts(state: { loading_products: boolean }, item: boolean) {
+      state.loading_products = item
+    },
+    setPaginationPageObj(
+      state: { pagination_page_obj: { page: number; rowsPerPage: number } },
+      item: { page: number; rowsPerPage: number }
+    ) {
+      state.pagination_page_obj = item
     }
   },
   getters: {
@@ -32,23 +54,83 @@ export default {
     //handle loading products
     getAddLoadingProducts(state: { resultProduct: boolean }) {
       return state.resultProduct
+    },
+
+    //handle selected product
+    getSelectedProduct(state: { selectedProduct: Product }) {
+      return state.selectedProduct
+    },
+
+    //get products type
+    getProductsType(state: { productsType: GetProductTypes[] }) {
+      return state.productsType
+    },
+
+    //handle loading products
+    getLoadingProducts(state: { loading_products: boolean }) {
+      return state.loading_products
+    },
+
+    //handle pagination page obj
+    getPaginationPageObj(state: { pagination_page_obj: { page: number; rowsPerPage: number } }) {
+      return state.pagination_page_obj
     }
   },
 
   actions: {
     //Fetch Products start
-    async fetchProduct(context: {
-      commit: (arg0: string, arg1: Product[]) => void
-    }): Promise<void> {
+    async fetchProduct(
+      context: {
+        commit: (
+          arg0: string,
+          arg1: Product[] | boolean | { page: number; rowsPerPage: number }
+        ) => void
+      },
+      obj?: { page: number; rowsPerPage: number }
+    ): Promise<void> {
+      context.commit('setLoadingProducts', true)
+      context.commit('setPaginationPageObj', obj)
+
+      const params = {
+        page: obj.page
+      }
+
+      if (obj.rowsPerPage) {
+        Object.assign(params, { perPage: obj.rowsPerPage })
+      }
+
+      console.log('obj', obj)
+
       try {
-        await axios.get<Product[]>('http://94.158.54.194:9092/api/product').then((response) => {
-          context.commit('setProducts', response.data), console.log(response.data)
+        await axios
+          .get(import.meta.env.VITE_API_URL, {
+            params
+          })
+          .then((response) => {
+            context.commit('setProducts', response.data)
+          })
+        // await axios.get<Product[]>(import.meta.env.VITE_API_URL).then((response) => {
+        //   context.commit('setProducts', response.data)
+        // })
+      } catch (error) {
+        console.error('Error fetching data:', error)
+      } finally {
+        context.commit('setLoadingProducts', false)
+      }
+    },
+    //Fetch Products end
+
+    //GET TYPES PRODUCT START
+    async getTypeProducts(context: { commit: (arg0: string, arg1: GetProductTypes[]) => void }) {
+      try {
+        await axios.get(`${import.meta.env.VITE_API_URL}/get-product-types`).then((response) => {
+          context.commit('setProductsType', response.data)
         })
       } catch (error) {
         console.error('Error fetching data:', error)
       }
     },
-    //Fetch Products end
+    //GET TYPES PRODUCT END
 
     //Added Products start
     async addProducts(
@@ -61,7 +143,7 @@ export default {
       console.log('obj', obj)
       try {
         await axios
-          .post('http://94.158.54.194:9092/api/product', {
+          .post(import.meta.env.VITE_API_URL, {
             name_uz: obj.name_uz,
             product_type_id: obj.product_type_id,
             cost: obj.cost,
@@ -89,7 +171,7 @@ export default {
       id: number
     ) {
       try {
-        await axios.delete(`http://94.158.54.194:9092/api/product/${id}`).then((response) => {
+        await axios.delete(`${import.meta.env.VITE_API_URL}/${id}`).then((response) => {
           if (response.data) {
             context.commit('setAddLoadingProducts', true)
           }
@@ -113,7 +195,7 @@ export default {
       try {
         console.log('obj', obj)
         await axios
-          .put('http://94.158.54.194:9092/api/product', {
+          .put(import.meta.env.VITE_API_URL, {
             id: obj.id,
             name_uz: obj.obj.name_uz,
             product_type_id: obj.obj.product_type_id,

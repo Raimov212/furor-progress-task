@@ -1,17 +1,22 @@
-<script setup>
-defineProps({
-  modelValue: {
-    type: String,
-    default: ''
+<script>
+export default {
+  props: {
+    modelValue: {
+      type: String,
+      default: ''
+    },
+    label: String
   },
-  label: String
-})
+  setup(props) {
+    return { props }
+  }
+}
 </script>
 
 <template>
   <q-input
     filled
-    :value="modelValue"
+    :value="props.modelValue"
     @input="$emit('update:modelValue', $event.target.value)"
     v-bind="$attrs"
     label="Ism"

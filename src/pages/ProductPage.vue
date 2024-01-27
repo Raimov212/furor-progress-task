@@ -1,5 +1,5 @@
 <script lang="ts">
-import { defineComponent, ref, onMounted, computed, type Ref } from 'vue'
+import { defineComponent, ref, onMounted, computed, type Ref, watch, onUpdated } from 'vue'
 import type { Product } from '../types/product'
 import { useStore } from 'vuex'
 import { exportFile, useQuasar } from 'quasar'
@@ -12,31 +12,61 @@ export default defineComponent({
   components: {
     AddProductComp
   },
+
   setup() {
     const store = useStore()
     const q = useQuasar()
 
+    const loading_products = store.getters.getLoadingProducts
+
     const selected: Ref<Product | undefined> = ref()
     const tableRef = ref()
+    const pagination = ref({
+      page: store.getters.getPaginationPageObj.page,
+      rowsPerPage: store.getters.getPaginationPageObj.rowsPerPage,
+      rowsNumber: store.getters.getAllProducts.length
+    })
 
-    onMounted(() => {
-      store.dispatch('fetchProduct')
+    console.log(store.getters.getAllProducts)
+
+    // console.log(loading_products)
+    computed(() => {
+      return store.getters.getLoadingProducts
     })
 
     computed(() => {
       return store.getters.getAllProducts
     })
 
+    console.log(store.state.product.products)
+
+    // pagination.value.page = store.getters.getPaginationPageObj.page
+    // pagination.value.rowsPerPage = store.getters.getPaginationPageObj.rowsPerPage
+
+    pagination.value.rowsNumber = store.getters.getAllProducts.length
+
+    const handleRequest = (props: { pagination: any }) => {
+      let obj = {
+        page: props.pagination.page,
+        rowsPerPage: props.pagination.rowsPerPage
+      }
+      store.dispatch('fetchProduct', obj)
+      console.log('page', props.pagination)
+    }
+
     return {
       columns,
       selected,
       store,
       tableRef,
+      loading_products,
+      pagination,
+      handleRequest,
 
       //Export CSV FILE
       exportTable() {
         // naive encoding to csv format
-        const content = [columns.map((col) => wrapCsvValue(col.label))]
+        const content = [columns.map((col) => wrapCsvValue(col.label, undefined, undefined))]
           .concat(
             store.getters.getAllProducts.map((row: { [x: string]: string }) =>
               columns
@@ -98,6 +128,7 @@ export default defineComponent({
       handleRowsEdit(item: Product) {
         selected.value = item
         store.commit('setPromptDialog', true)
+        store.commit('setSelectedProduct', item)
       }
     }
   }
@@ -109,12 +140,15 @@ export default defineComponent({
     <q-table
       flat
       bordered
+      :loading="loading_products"
       ref="tableRef"
       title="Products table"
       :rows="store.getters.getAllProducts"
       :columns="columns"
       dark
       selection="single"
+      v-model:pagination="pagination"
+      @request="handleRequest"
     >
       <template v-slot:top-right>
         <q-btn
@@ -163,7 +197,7 @@ export default defineComponent({
               color="warning"
             />
             <div v-if="store.getters.getPromptDialogProducts">
-              <AddProductComp :item="selected" />
+              <AddProductComp />
             </div>
           </q-td>
           <q-td key="id" :props="props">{{ props.row.id }} </q-td>

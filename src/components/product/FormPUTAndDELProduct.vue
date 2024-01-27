@@ -1,26 +1,46 @@
 <script lang="ts">
 import { useQuasar } from 'quasar'
-import { type Ref, ref } from 'vue'
+import { type Ref, ref, computed } from 'vue'
 import { mapActions, useStore } from 'vuex'
+import type { GetProductTypes } from '../../types/product'
+// import InputTextUIComp from '../../ui/InputTextUiComp.vue'
 
 export default {
   methods: {
     ...mapActions(['addProducts'])
   },
-  props: {
-    item: {
-      type: Object
-    }
-  },
-  setup(props) {
+
+  // components: {
+  //   InputTextUIComp
+  // },
+
+  setup() {
     const q = useQuasar()
     const store = useStore()
 
-    const name: Ref<string | null> = ref(props.item?.name_uz ?? null)
-    const address: Ref<string | null> = ref(props.item?.address ?? null)
-    const cost: Ref<number | null> = ref(props.item?.cost ?? null)
-    const productType: Ref<string> = ref('bir')
-    const options = ['bir', 'ikki', 'uch']
+    const options: string[] = []
+
+    const selectItem = store.getters.getSelectedProduct
+    const product_type: GetProductTypes[] = store.getters.getProductsType
+
+    const name: Ref<string | null> = ref(null)
+    const address: Ref<string | null> = ref(null)
+    const cost: Ref<number | null> = ref(null)
+    const productType: Ref<number | null> = ref(null)
+
+    computed(() => {
+      return selectItem
+    })
+
+    product_type.map((item) => options.push(item.name_uz))
+
+    console.log('selectItem', selectItem)
+    if (selectItem) {
+      name.value = selectItem?.name_uz
+      address.value = selectItem?.address
+      cost.value = selectItem?.cost
+      productType.value = selectItem?.product_type_id
+    }
 
     return {
       name,
@@ -29,9 +49,16 @@ export default {
       productType,
       options,
       store,
-      textTitle: props.item,
+      textTitle: selectItem,
+      product_type,
 
+      //HANDLE CLOSE DIALOG
       handleCloseDialog() {
+        store.commit('setSelectedProduct', undefined)
+        name.value = null
+        cost.value = null
+        address.value = null
+        productType.value = null
         store.commit('setPromptDialog', false)
       },
 
@@ -40,13 +67,12 @@ export default {
         const date = new Date()
         const newDate = `${date.getFullYear()}-${date.getMonth() === 0 ? date.getMonth() + '1' : 1 + date.getMonth()}-${date.getUTCDate()}`
 
-        const indices = []
-        let idx = options.indexOf(productType.value)
-        while (idx != -1) {
-          indices.push(idx)
-          idx = options.indexOf(productType.value, idx + 1)
-        }
-        const optionId = parseInt(indices.join(''))
+        let optionId: number | null = null
+        product_type.forEach((item) => {
+          if (item.id === productType.value) {
+            optionId = item.id
+          }
+        })
 
         const obj = {
           product_type_id: optionId,
@@ -56,21 +82,25 @@ export default {
           created_date: newDate
         }
 
-        if (props.item) {
+        console.log('result', obj)
+
+        //UPDATE PRODUCTS STORE FUNCTION
+        if (selectItem) {
           await store.dispatch('updateProducts', {
-            id: props.item.id,
+            id: selectItem.id,
             obj
           })
         } else {
           await store.dispatch('addProducts', obj)
         }
 
+        //ADD PRODUCT OR UPDATE PRODUCT TO PRODUCTS LIST
         if (store.getters.getAddLoadingProducts) {
           q.notify({
             color: 'green-4',
             textColor: 'white',
             icon: 'cloud_done',
-            message: 'Product is created'
+            message: 'Product is success full'
           })
         } else {
           q.notify({
@@ -88,7 +118,7 @@ export default {
         name.value = null
         cost.value = null
         address.value = null
-        productType.value = 'bir'
+        productType.value = null
       }
     }
   }
@@ -138,12 +168,13 @@ export default {
               type="number"
               :options="options"
               v-model="productType"
-              label="Miqdor"
+              label="Type"
               lazy-rules
+              :rules="[(val) => val || `Type bo'sh bo'lishi mumkin emas`]"
             />
 
             <q-card-actions align="between" class="text-primary">
-              <q-btn flat label="Cancel" clo @click="handleCloseDialog" />
+              <q-btn flat label="Cancel" @click="handleCloseDialog" />
               <q-btn label="Reset" type="reset" color="primary" flat class="q-ml-sm" />
               <q-btn label="Submit" type="submit" color="primary" flat />
             </q-card-actions>
